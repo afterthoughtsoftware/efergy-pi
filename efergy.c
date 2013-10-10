@@ -104,20 +104,20 @@ static irqreturn_t efergy_edge(int irq, void* dev_id)
 	return(IRQ_HANDLED);
 }
 
-static int __init mymodule_init(void)
+static int __init efergy_init(void)
 {
 	int retval;
 
 	// TODO: GPIO number as module parameter?
 	gpio_number = 25;
-	retval = gpio_direction_input(gpio_number);
-	if (retval != 0)
-	{
-		pr_err("Could not make GPIO input");
+
+	retval = gpio_request_one(gpio_number, GPIOF_DIR_IN, "efergy_rfdata");
+	if (retval) {
+		pr_err("Can't request gpio %d\n", gpio_number);
 		return retval;
 	}
-	irq_number = gpio_to_irq(25);
 
+	irq_number = gpio_to_irq(gpio_number);
 	if (request_irq(irq_number, efergy_edge, IRQF_TRIGGER_RISING|IRQF_TRIGGER_FALLING, "efergy_edge", NULL) ) {
 		pr_err("GPIO_RISING: trouble requesting IRQ %d (rising)",irq_number);
 		return(-EIO);
@@ -161,18 +161,19 @@ failed_chrdevreg:
 	return -1;
 }
 
-static void __exit mymodule_exit(void)
+static void __exit efergy_exit(void)
 {
 	device_destroy(efergy_class, MKDEV(efergy_major, 0));
 	class_unregister(efergy_class);
 	class_destroy(efergy_class);
 	unregister_chrdev(efergy_major, DEVICE_NAME);
 	free_irq(irq_number, NULL);
+	gpio_free(gpio_number);
 
 	return;
 }
 
-module_init(mymodule_init);
-module_exit(mymodule_exit);
+module_init(efergy_init);
+module_exit(efergy_exit);
 
 MODULE_LICENSE("GPL");
