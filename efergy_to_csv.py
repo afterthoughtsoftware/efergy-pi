@@ -15,6 +15,7 @@ def is_checksum_good(data):
   for i in range(7):
     checksum += data[i]
     pr_debug("0x{0:02x} ".format(data[i]))
+  pr_debug("0x{0:02x} ".format(data[7]))
 
   pr_debug("checksum: 0x{0:02x}\n".format(checksum % 256))
 
@@ -44,7 +45,10 @@ if __name__ == "__main__":
     with open("/dev/efergy_device", "r") as fh:
       while True:
         data = get_data(fh)
-        current = ((data[4] << 8) | data[5]) / 32768.0 * (2 ** data[6])
+        exp = data[6]
+        if exp > 127:
+          exp -= 256
+        current = ((data[4] << 8) | data[5]) / 32768.0 * (2 ** exp)
         power = current * 240
         csvdata = ",".join([str(datetime.date(datetime.now())), str(datetime.time(datetime.now())), str(current), str(power)])
         print csvdata
